@@ -1,0 +1,5 @@
+*.pyc
+*.log
+images/
+scraped_fig_for_news_content.csv
+scraped_news_content.csv
