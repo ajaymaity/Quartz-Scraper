@@ -24,7 +24,7 @@ search_keyword = search_keyword.strip()
 URL = "https://qz.com/search/%s/" % (search_keyword)
 
 # CHANGE THIS TO YOUR NEED
-NO_OF_ARTICLES = 50
+NO_OF_ARTICLES = 100
 DELAY_BETWEEN_SCROLLS = 3 # in seconds
 
 # Start driver
@@ -58,7 +58,9 @@ for idx, article in enumerate(articles):
 
 driver.quit()
 
-# article_url = ['https://qz.com/698951/photos-paris-is-drowning-in-epic-floods/'] # TESTING
+# article_url = ['https://qz.com/1260067/emmanuel-macron-gifted-donald-trump-a-bare-dead-looking-tree-and-first-lady-melania-trump-loves-it/'] # TESTING
+# article_url = ['https://qz.com/543904/can-trees-really-change-sex/'] # TESTING
+# article_url = ['https://qz.com/157109/latest-gizmo-to-join-internet-of-things-is-your-christmas-tree/']
 
 num_articles = len(article_url)
 print("Found %d number of articles." % (num_articles))
@@ -93,25 +95,44 @@ with open("scraped_news_content.csv", "w", encoding="utf-8", newline='') as scra
             article = main.find("article", recursive=False)
             header = article.find("header", recursive=False)            
             header_div = header.find("div", recursive=False)
+            header_div_children = header_div.find_all(recursive=False)
             header_div_divs = header_div.select("div")
             header_fig = header.find("figure", recursive=False)
             heading = header_div.select("h1")[0].get_text()
             
             i = 0
+            author_found = False
+            datetime_found = False
             if len(header_div_divs) == 2: tagline = ""
+            elif len(header_div_divs) == 4:
+                if header_div_children[0].name == "h1":
+                    tagline = ""
+                    span_author_datetime = header_div.find("div", recursive=False).select("div")[2].find("span", recursive=False).select("span")
+                    author = span_author_datetime[0].find("a", recursive=False).get_text()
+                    author_found = True
+                    datetime = span_author_datetime[2].find("time", recursive=False).get_text()
+                    datetime_found = True
             else:
                 tagline = header_div.select("div")[0].get_text()
                 i = 1
             
-            author = header_div_divs[i].select("div > span")[0].select("span")[0].select("a")[0].get_text()
-            header_div_span = header_div_divs[i].select("div > span")[0].select("span")[2]
-            try:
-                datetime = header_div_span.select("time")[0].get_text()
-            except IndexError:
-                datetime = header_div.select("div")[1].select("div > span")[0].select("span")[3].select("time")[0].get_text()
-
+            if not author_found:
+                author = header_div_divs[i].select("div > span")[0].select("span")[0].select("a")[0].get_text()
+            if not datetime_found:
+                header_div_span = header_div_divs[i].select("div > span")[0].select("span")
+                try:
+                    if len(header_div_span) == 4:
+                        datetime = header_div_span[3].select("time")[0].get_text()
+                    else:
+                        datetime = header_div_span[2].select("time")[0].get_text()
+                except IndexError:
+                    datetime = header_div.select("div")[1].select("div > span")[0].select("span")[3].select("time")[0].get_text()
+            
             if header_fig is not None:
-                figure_captions.append(header_fig.find("figcaption", recursive=False).get_text())
+                try:
+                    figure_captions.append(header_fig.find("figcaption", recursive=False).get_text())
+                except AttributeError:
+                    figure_captions.append("")
                 figure_links.append(header_fig.find("div", recursive=False).select("div")[0].find("img")["src"].split("?", 1)[0])
             contents = article.find("div", recursive=False).find("div", recursive=False)
             text = contents.select("p")
